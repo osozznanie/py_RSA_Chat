@@ -3,6 +3,7 @@ import threading
 import rsa
 from constants import *
 
+
 def handle_client(client_socket, client_address, client_public_key):
     try:
         while True:
@@ -24,6 +25,7 @@ def handle_client(client_socket, client_address, client_public_key):
     finally:
         client_socket.close()
         print(f"Connection with {client_address} closed.")
+
 
 def main():
     global private_key
@@ -50,8 +52,10 @@ def main():
             client_socket.send(SERVER_NAME.encode())
             client_socket.send(public_key.save_pkcs1())
 
-            client_thread = threading.Thread(target=handle_client, args=(client_socket, client_address, client_public_key))
+            client_thread = threading.Thread(target=handle_client,
+                                             args=(client_socket, client_address, client_public_key))
             client_thread.start()
+
 
 if __name__ == '__main__':
     main()
