@@ -1,38 +1,38 @@
 import socket
 import rsa
+from constants import *
 
-(public_key, private_key) = rsa.newkeys(512)
+def main():
+    (public_key, private_key) = rsa.newkeys(PUBLIC_KEY_SIZE)
 
-client_socket = socket.socket()
+    with socket.socket() as client_socket:
+        client_socket.connect((SERVER_HOST, SERVER_PORT))
+        client_socket.send(CLIENT_NAME.encode())
 
-server_ip = input("Enter server's IP address: ")
-port = int(input("Enter port: "))
+        client_public_key_pem = public_key.save_pkcs1().decode()
+        client_socket.send(client_public_key_pem.encode())
 
-client_socket.connect((server_ip, port))
+        server_name = client_socket.recv(ENCRYPTED_MESSAGE_SIZE).decode()
+        server_public_key_pem_bytes = client_socket.recv(ENCRYPTED_MESSAGE_SIZE)
+        server_public_key_pem = server_public_key_pem_bytes.decode()
+        server_public_key = rsa.PublicKey.load_pkcs1(server_public_key_pem.encode())
 
-client_socket.send('Client'.encode())
+        print(f'Connected to {server_name}.')
 
-client_public_key_pem = public_key.save_pkcs1().decode()
-client_socket.send(client_public_key_pem.encode())
+        try:
+            while True:
+                message = input('Enter a message: ')
+                if message.lower() == EXIT_MESSAGE:
+                    break
 
-server_name = client_socket.recv(1024).decode()
+                encrypted_message = rsa.encrypt(message.encode(), server_public_key)
+                client_socket.send(encrypted_message)
 
-server_public_key_pem_bytes = client_socket.recv(1024)
-server_public_key_pem = server_public_key_pem_bytes.decode()
-server_public_key = rsa.PublicKey.load_pkcs1(server_public_key_pem.encode())
+                encrypted_reply = client_socket.recv(ENCRYPTED_MESSAGE_SIZE)
+                reply = rsa.decrypt(encrypted_reply, private_key).decode()
+                print(f'{server_name}: {reply}')
+        except (KeyboardInterrupt, ConnectionResetError):
+            print('Connection closed.')
 
-print(f'Connected to {server_name}.')
-
-while True:
-    message = input('Enter a message: ')
-    encrypted_message = rsa.encrypt(message.encode(), server_public_key)
-    client_socket.send(encrypted_message)
-
-    if message.lower() == 'exit':
-        break
-
-    encrypted_reply = client_socket.recv(1024)
-    reply = rsa.decrypt(encrypted_reply, private_key).decode()
-    print(f'{server_name}: {reply}')
-
-client_socket.close()
+if __name__ == '__main__':
+    main()
