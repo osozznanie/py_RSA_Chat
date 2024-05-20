@@ -1,78 +1,49 @@
 import socket
 import threading
-import sys
-
 import rsa
 
-
-def receive_messages(conn, client_name):
+def handle_client(client_socket, client_address, client_public_key):
     while True:
         try:
-            message = conn.recv(1024).decode()
+            encrypted_message = client_socket.recv(1024)
+            message = rsa.decrypt(encrypted_message, private_key).decode()
+
             if message:
-                # Clear the input line
-                sys.stdout.write('\r' + ' ' * (len(input_prompt) + len(current_input)) + '\r')
-                sys.stdout.flush()
-
-                print(f'{client_name}: {message}')
-
-                # Reprint the input prompt
-                sys.stdout.write(input_prompt + current_input)
-                sys.stdout.flush()
+                print(f'{client_address}: {message}')
+                if message.lower() == 'exit':
+                    break
+                reply = input('Enter a reply: ')
+                encrypted_reply = rsa.encrypt(reply.encode(), client_public_key)
+                client_socket.send(encrypted_reply)
             else:
                 break
         except Exception as e:
-            print(f"Error receiving message: {e}")
+            print(f"Error handling client {client_address}: {e}")
             break
-    conn.close()
-    print(f"Connection with {client_name} closed.")
+    client_socket.close()
+    print(f"Connection with {client_address} closed.")
 
-
-def send_messages(conn):
-    global current_input
-    while True:
-        try:
-            message = input(input_prompt)
-            current_input = ''
-            if message:
-                conn.send(message.encode())
-            else:
-                break
-        except Exception as e:
-            print(f"Error sending message: {e}")
-            break
-    conn.close()
-
-
-# Generate public and private keys for the server
 (public_key, private_key) = rsa.newkeys(512)
 
-new_socket = socket.socket()
-new_socket.bind(('127.0.0.1', 5152))  # Use an available port
-new_socket.listen()
+server_socket = socket.socket()
+server_socket.bind(('localhost', 5153))
+server_socket.listen(5)
 
-print('Waiting for connection...')
-name = input('Enter your name: ')
-conn, addr = new_socket.accept()
+print('Server is listening...')
 
-# Serialize and send the server's public key in PEM format
-public_key_pem = public_key.save_pkcs1().decode()
-conn.send(public_key_pem.encode())
+while True:
+    client_socket, client_address = server_socket.accept()
 
-conn.send(name.encode())
+    client_name = client_socket.recv(1024).decode()
 
-client_name = conn.recv(1024).decode()
-print(f'{client_name} has connected.')
+    client_public_key_pem_bytes = client_socket.recv(1024)
+    client_public_key_pem = client_public_key_pem_bytes.decode()
+    client_public_key = rsa.PublicKey.load_pkcs1(client_public_key_pem.encode())
 
-input_prompt = 'You: '
-current_input = ''
+    print(f'{client_name} has connected from {client_address}.')
 
-receive_thread = threading.Thread(target=receive_messages, args=(conn, client_name))
-send_thread = threading.Thread(target=send_messages, args=(conn,))
+    client_socket.send('Server'.encode())
+    client_socket.send(public_key.save_pkcs1())
 
-receive_thread.start()
-send_thread.start()
-
-receive_thread.join()
-send_thread.join()
-print("Server has stopped.")
+    client_thread = threading.Thread(target=handle_client, args=(client_socket, client_address, client_public_key))
+    client_thread.start()
