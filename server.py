@@ -26,7 +26,11 @@ def handle_client(client_socket, client_address, client_public_key):
 (public_key, private_key) = rsa.newkeys(512)
 
 server_socket = socket.socket()
-server_socket.bind(('localhost', 5153))
+
+server_ip = input("Enter server's IP address: ")
+port = int(input("Enter port: "))
+
+server_socket.bind(('0.0.0.0', port))
 server_socket.listen(5)
 
 print('Server is listening...')

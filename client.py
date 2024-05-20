@@ -4,7 +4,11 @@ import rsa
 (public_key, private_key) = rsa.newkeys(512)
 
 client_socket = socket.socket()
-client_socket.connect(('localhost', 5153))
+
+server_ip = input("Enter server's IP address: ")
+port = int(input("Enter port: "))
+
+client_socket.connect((server_ip, port))
 
 client_socket.send('Client'.encode())
 
