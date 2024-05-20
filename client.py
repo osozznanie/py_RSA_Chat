@@ -2,6 +2,7 @@ import socket
 import rsa
 from constants import *
 
+
 def main():
     (public_key, private_key) = rsa.newkeys(PUBLIC_KEY_SIZE)
 
@@ -33,6 +34,7 @@ def main():
                 print(f'{server_name}: {reply}')
         except (KeyboardInterrupt, ConnectionResetError):
             print('Connection closed.')
+
 
 if __name__ == '__main__':
     main()
