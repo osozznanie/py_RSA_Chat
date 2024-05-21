@@ -11,14 +11,14 @@ def handle_client(client_socket, client_address, client_public_key):
             if not encrypted_message:
                 break
 
-            message = rsa.decrypt(encrypted_message, private_key).decode()
-            print(f'{client_address}: {message}')
+            decrypted_message = rsa.decrypt_msg(encrypted_message, private_key)
+            print(f'{client_address}: {decrypted_message}')
 
-            if message.lower() == EXIT_MESSAGE:
+            if decrypted_message.lower() == EXIT_MESSAGE:
                 break
 
             reply = input('Enter a reply: ')
-            encrypted_reply = rsa.encrypt(reply.encode(), client_public_key)
+            encrypted_reply = rsa.encrypt_msg(reply.encode(), client_public_key)
             client_socket.send(encrypted_reply)
     except Exception as e:
         print(f"Error handling client {client_address}: {e}")
@@ -28,29 +28,29 @@ def handle_client(client_socket, client_address, client_public_key):
 
 
 def main():
-    global private_key
+    global private_key, public_key
 
-    (public_key, private_key) = rsa.newkeys(PUBLIC_KEY_SIZE)
+    public_key, private_key = rsa.generate_key_pair_for_encrypt()
+    print(f"Server's public key: {public_key}")
 
     with socket.socket() as server_socket:
         server_socket.bind((SERVER_HOST, SERVER_PORT))
         server_socket.listen(LIMIT_LISTEN)
-
         print('Server is listening...')
 
         while True:
             client_socket, client_address = server_socket.accept()
 
-            client_name = client_socket.recv(ENCRYPTED_MESSAGE_SIZE).decode()
+            client_name = CLIENT_NAME
+            print(f"Received client name: {client_name}")
 
             client_public_key_pem_bytes = client_socket.recv(ENCRYPTED_MESSAGE_SIZE)
-            client_public_key_pem = client_public_key_pem_bytes.decode()
-            client_public_key = rsa.PublicKey.load_pkcs1(client_public_key_pem.encode())
+            client_public_key = rsa.load_public_key(client_public_key_pem_bytes)
+            print(f"Received client public key: {client_public_key}")
 
             print(f'{client_name} has connected from {client_address}.')
 
-            client_socket.send(SERVER_NAME.encode())
-            client_socket.send(public_key.save_pkcs1())
+            client_socket.send(rsa.convert_public_key_to_string(public_key).ljust(512).encode())
 
             client_thread = threading.Thread(target=handle_client,
                                              args=(client_socket, client_address, client_public_key))
