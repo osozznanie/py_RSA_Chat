@@ -1,3 +1,4 @@
+import pickle
 import socket
 import rsa
 from constants import *
@@ -12,16 +13,18 @@ def main():
 
         print(f"Sent client name: {CLIENT_NAME}")
 
-        client_public_key_pem = rsa.convert_public_key_to_string(public_key)
-        client_socket.send(client_public_key_pem.encode())
-        print(f"Sent client public key: {client_public_key_pem}")
+        public_key_str = str(public_key)
+        public_key_bytes = public_key_str.encode()
+        client_socket.send(public_key_bytes)
+        print(f"Sent client public key: {public_key_bytes}")
 
         server_name = SERVER_NAME
         print(f"Received server name: {server_name}")
 
-        server_public_key_pem_bytes = client_socket.recv(512)
-        server_public_key = rsa.load_public_key(server_public_key_pem_bytes)
-        print(f"Received server public key: {server_public_key}")
+        server_public_key = client_socket.recv(512)
+        public_key_str = server_public_key.decode()
+        public_key = tuple(map(int, public_key_str.strip('()').split(',')))
+        print(f"Received server public key: {public_key}")
 
         print(f'Connected to {server_name}.')
 
@@ -31,14 +34,17 @@ def main():
                 if message.lower() == EXIT_MESSAGE:
                     break
 
-                encrypted_message = rsa.encrypt_msg(message.encode(), server_public_key)
-                client_socket.send(encrypted_message)
-                print(f"Sent encrypted message: {encrypted_message}")
+                encrypted_message = rsa.encrypt_msg(message, server_public_key)
+                encrypted_message_bytes = pickle.dumps(encrypted_message)  # Convert the list to bytes
+                client_socket.send(encrypted_message_bytes)
+                print('Encrypted message:', ''.join(map(lambda x: str(x), encrypted_message)))
 
-                encrypted_reply = client_socket.recv(ENCRYPTED_MESSAGE_SIZE)
+                encrypted_reply_bytes = client_socket.recv(ENCRYPTED_MESSAGE_SIZE)
+                encrypted_reply = pickle.loads(encrypted_reply_bytes)  # Convert the bytes back to a list
                 reply = rsa.decrypt_msg(encrypted_reply, private_key)
                 print(f"Received encrypted reply: {encrypted_reply}")
                 print(f"Decrypted reply: {reply}")
+
         except (KeyboardInterrupt, ConnectionResetError):
             print('Connection closed.')
 

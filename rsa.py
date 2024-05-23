@@ -38,32 +38,18 @@ def generate_key_pair_for_encrypt():
             break
 
     closed_exhibitor = pow(open_exhibitor, -1, phi)
-    return ((open_exhibitor, checked_num), (closed_exhibitor, checked_num))
+    return (open_exhibitor, checked_num), (closed_exhibitor, checked_num)
 
 
 def encrypt_msg(message, public_key):
-    open_exhibitor, checked_num = public_key
-    encrypted_message = bytearray()
-    for char in message:
-        encrypted_char = pow(char, open_exhibitor, checked_num)
-        encrypted_message.extend(encrypted_char.to_bytes((encrypted_char.bit_length() + 7) // 8, byteorder='big'))
-    return bytes(encrypted_message)
+    key, n = public_key
+    return [pow(ord(char), key, n) for char in message]
 
 
 def decrypt_msg(encrypted_message, private_key):
     closed_exhibitor, checked_num = private_key
     decrypted_message = bytearray()
-    for char in encrypted_message:
-        decrypted_char = pow(char, closed_exhibitor, checked_num)
+    for encrypted_char in encrypted_message:
+        decrypted_char = pow(encrypted_char, closed_exhibitor, checked_num)
         decrypted_message.append(decrypted_char)
     return bytes(decrypted_message)
-
-
-def load_public_key(pem_string):
-    open_exhibitor, checked_num = map(int, pem_string.strip().split(b','))
-    return (open_exhibitor, checked_num)
-
-
-def convert_public_key_to_string(public_key):
-    open_exhibitor, checked_num = public_key
-    return f"{open_exhibitor},{checked_num}"

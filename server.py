@@ -1,61 +1,68 @@
+import pickle
 import socket
 import threading
+
 import rsa
 from constants import *
 
 
-def handle_client(client_socket, client_address, client_public_key):
-    try:
-        while True:
-            encrypted_message = client_socket.recv(ENCRYPTED_MESSAGE_SIZE)
-            if not encrypted_message:
-                break
+class Server:
+    def __init__(self):
+        self.rsa = rsa
+        self.public_key, self.private_key = self.rsa.generate_key_pair_for_encrypt()
+        print(f"Server's public key: {self.public_key}")
 
-            decrypted_message = rsa.decrypt_msg(encrypted_message, private_key)
-            print(f'{client_address}: {decrypted_message}')
+    def handle_client(self, client_socket, client_address, client_public_key):
+        try:
+            while True:
+                encrypted_message = client_socket.recv(ENCRYPTED_MESSAGE_SIZE)
+                if not encrypted_message:
+                    break
 
-            if decrypted_message.lower() == EXIT_MESSAGE:
-                break
+                decrypted_message = self.rsa.decrypt_msg(encrypted_message, self.private_key)
+                print(f'{client_address}: {decrypted_message}')
 
-            reply = input('Enter a reply: ')
-            encrypted_reply = rsa.encrypt_msg(reply.encode(), client_public_key)
-            client_socket.send(encrypted_reply)
-    except Exception as e:
-        print(f"Error handling client {client_address}: {e}")
-    finally:
-        client_socket.close()
-        print(f"Connection with {client_address} closed.")
+                if decrypted_message.lower() == EXIT_MESSAGE:
+                    break
 
+                reply = input('Enter a reply: ')
+                encrypted_reply = self.rsa.encrypt_msg(reply.encode(), client_public_key)
+                client_socket.send(encrypted_reply)
+        except Exception as e:
+            print(f"Error handling client {client_address}: {e}")
+        finally:
+            client_socket.close()
+            print(f"Connection with {client_address} closed.")
 
-def main():
-    global private_key, public_key
+    def start(self):
+        with socket.socket() as server_socket:
+            server_socket.bind((SERVER_HOST, SERVER_PORT))
+            server_socket.listen(LIMIT_LISTEN)
+            print('Server is listening...')
 
-    public_key, private_key = rsa.generate_key_pair_for_encrypt()
-    print(f"Server's public key: {public_key}")
+            while True:
+                client_socket, client_address = server_socket.accept()
 
-    with socket.socket() as server_socket:
-        server_socket.bind((SERVER_HOST, SERVER_PORT))
-        server_socket.listen(LIMIT_LISTEN)
-        print('Server is listening...')
+                client_name = CLIENT_NAME
+                print(f"Received client name: {client_name}")
 
-        while True:
-            client_socket, client_address = server_socket.accept()
+                client_public_key = client_socket.recv(512)
+                public_key_str = client_public_key.decode()
+                public_key = tuple(map(int, public_key_str.strip('()').split(',')))
+                print(f"Received client public key: {public_key}")
 
-            client_name = CLIENT_NAME
-            print(f"Received client name: {client_name}")
+                print(f'{client_name} has connected from {client_address}.')
 
-            client_public_key_pem_bytes = client_socket.recv(ENCRYPTED_MESSAGE_SIZE)
-            client_public_key = rsa.load_public_key(client_public_key_pem_bytes)
-            print(f"Received client public key: {client_public_key}")
+                public_key_str = str(public_key)
+                public_key_bytes = public_key_str.encode()
+                client_socket.send(public_key_bytes)
+                print(f"Sent server public key: {public_key_bytes}")
 
-            print(f'{client_name} has connected from {client_address}.')
-
-            client_socket.send(rsa.convert_public_key_to_string(public_key).ljust(512).encode())
-
-            client_thread = threading.Thread(target=handle_client,
-                                             args=(client_socket, client_address, client_public_key))
-            client_thread.start()
+                client_thread = threading.Thread(target=self.handle_client,
+                                                 args=(client_socket, client_address, client_public_key))
+                client_thread.start()
 
 
 if __name__ == '__main__':
-    main()
+    server = Server()
+    server.start()
