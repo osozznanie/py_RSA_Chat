@@ -1,48 +1,59 @@
+import logging
 import socket
 import custom_rsa
 from constants import *
 
-def main():
-    # Генерация ключей RSA
-    public_key, private_key = custom_rsa.key_generation()
+logging.basicConfig(level=logging.INFO)
 
-    with socket.socket() as client_socket:
-        client_socket.connect((SERVER_HOST, SERVER_PORT))
-        print('Connected to the server.')
 
-        # Получение открытого ключа сервера
-        server_public_key = client_socket.recv(1024).decode()
-        server_public_key = tuple(map(int, server_public_key.strip('()').split(', ')))
-        print('Public key:', public_key)
+class Client:
+    def __init__(self, host, port):
+        self.host = host
+        self.port = port
+        self.public_key, self.private_key = custom_rsa.key_generation()
+        self.server_public_key = None
+        self.client_socket = socket.socket()
 
-        # Получение имени сервера
+    def start(self):
+        self.client_socket.connect((self.host, self.port))
+        logging.info('Connected to the server...')
+
+        self.server_public_key = self.receive_public_key()
+        logging.info('Received server public key: %s', self.server_public_key)
+
+        self.client_socket.send(str(self.public_key).encode())
+
         server_name = SERVER_NAME
-        print(f'Connected to server named: {server_name}')
+        logging.info('Server name: %s', server_name)
 
-        print('Received server public key:', server_public_key)
+        self.communicate(server_name)
 
-        # Отправка открытого ключа серверу
-        client_socket.send(str(public_key).encode())
+    def receive_public_key(self):
+        server_public_key = self.client_socket.recv(ENCRYPTED_MESSAGE_SIZE).decode()
+        server_public_key = tuple(map(int, server_public_key.strip(ROUND_BRACKETS).split(COMMA)))
+        return server_public_key
 
+    def communicate(self, server_name):
         try:
             while True:
-                message = input('Enter a message: ')
-                print("\033[93mWaiting for the server to receive the reply...\033[0m")
+                encrypted_message = self.client_socket.recv(ENCRYPTED_MESSAGE_SIZE).decode()
+                encrypted_message = list(map(int, encrypted_message.strip(SQUARE_BRACKETS).split(COMMA)))
+                message = custom_rsa.decrypt(encrypted_message, self.private_key)
+                print(f'{server_name}: {message}')
 
-                if message.lower() == EXIT_MESSAGE:
+                reply = input('Enter a message: ')
+                if reply.lower() == EXIT_MESSAGE:
                     break
 
-                # Шифрование и отправка сообщения серверу
-                encrypted_message = custom_rsa.encrypt(message, server_public_key)
-                client_socket.send(str(encrypted_message).encode())
-
-                # Получение и расшифровка ответа от сервера
-                encrypted_reply = client_socket.recv(1024).decode()
-                encrypted_reply = list(map(int, encrypted_reply.strip('[]').split(', ')))
-                reply = custom_rsa.decrypt(encrypted_reply, private_key)
-                print(f'{server_name}: {reply}')
+                encrypted_reply = custom_rsa.encrypt(reply, self.server_public_key)
+                self.client_socket.send(str(encrypted_reply).encode())
+                print("\033[93mReply sent to the server...\033[0m")
         except (KeyboardInterrupt, ConnectionResetError):
             print('Connection closed.')
+        finally:
+            self.client_socket.close()
+
 
 if __name__ == '__main__':
-    main()
+    client = Client(SERVER_HOST, SERVER_PORT)
+    client.start()
