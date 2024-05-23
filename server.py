@@ -50,6 +50,10 @@ class Server:
                 print("\033[93mMessage sent to the client...\033[0m")
 
                 encrypted_reply = self.client_socket.recv(ENCRYPTED_MESSAGE_SIZE).decode()
+                if not encrypted_reply:
+                    print('Empty reply received from the client.')
+                    continue
+
                 encrypted_reply = list(map(int, encrypted_reply.strip(SQUARE_BRACKETS).split(COMMA)))
                 reply = custom_rsa.decrypt(encrypted_reply, self.private_key)
                 print(f'{client_name}: {reply}')

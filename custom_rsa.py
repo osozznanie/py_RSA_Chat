@@ -51,9 +51,10 @@ def key_generation():
         open_exhibitor = random.randint(1, phi)
         gcd = greatest_common_divisor(open_exhibitor, phi)
 
-    # Вычисление закрытой экспоненты open_exhibitor
-    open_exhibitor = pow(open_exhibitor, -1, phi)
-    return (open_exhibitor, general_module), (open_exhibitor, general_module)
+    # Вычисление закрытой экспоненты close_exhibitor
+    close_exhibitor = pow(open_exhibitor, -1, phi)
+
+    return (open_exhibitor, general_module), (close_exhibitor, general_module)
 
 
 # Шифрование
@@ -67,7 +68,24 @@ def encrypt(message, public_key):
 # Дешифрование
 def decrypt(ciphertext, private_key):
     key, n = private_key
-    # Восстановление оригинальных символов из зашифрованных данных
     decrypted = ''.join([chr(pow(char, key, n)) for char in ciphertext])
     return decrypted
+
+def main():
+    public_key, private_key = key_generation()
+    print(f'Public key: {public_key}')
+    print(f'Private key: {private_key}')
+    input_message = input('Enter a message: ')
+
+    encrypted_message = encrypt(input_message, public_key)
+    print(f'Encrypted message: {encrypted_message}')
+
+    decrypted_message = decrypt(encrypted_message, private_key)
+    print(f'Decrypted message: {decrypted_message}')
+
+
+if __name__ == '__main__':
+    main()
+
+
 
