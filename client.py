@@ -1,9 +1,6 @@
-import logging
 import socket
 import custom_rsa
 from constants import *
-
-logging.basicConfig(level=logging.INFO)
 
 
 class Client:
@@ -16,15 +13,15 @@ class Client:
 
     def start(self):
         self.client_socket.connect((self.host, self.port))
-        logging.info('Connected to the server...')
+        print(f'Connected to {self.host}:{self.port}...')
 
         self.server_public_key = self.receive_public_key()
-        logging.info('Received server public key: %s', self.server_public_key)
+        print(f'Received server public key: {self.server_public_key}')
 
         self.client_socket.send(str(self.public_key).encode())
 
         server_name = SERVER_NAME
-        logging.info('Server name: %s', server_name)
+        print(f'Server name: {server_name}')
 
         self.communicate(server_name)
 

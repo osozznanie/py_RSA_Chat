@@ -1,9 +1,6 @@
-import logging
 import socket
 import custom_rsa
 from constants import *
-
-logging.basicConfig(level=logging.INFO)
 
 
 class Server:
@@ -19,23 +16,23 @@ class Server:
     def start(self):
         self.server_socket.bind((self.host, self.port))
         self.server_socket.listen(self.limit_listen)
-        logging.info('Server is listening...')
+        print(f'Server is listening on {self.host}:{self.port}...')
 
         self.client_socket, client_address = self.server_socket.accept()
-        logging.info(f'Connected to {client_address}.')
+        print(f'Connection from {client_address} has been established.')
 
         self.client_socket.send(str(self.public_key).encode())
 
         self.client_public_key = self.receive_public_key()
         client_name = CLIENT_NAME
-        logging.info(f'Client name: {client_name}')
+        print(f'Client name: {client_name}')
 
         self.communicate(client_name)
 
     def receive_public_key(self):
         client_public_key = self.client_socket.recv(ENCRYPTED_MESSAGE_SIZE).decode()
         client_public_key = tuple(map(int, client_public_key.strip(ROUND_BRACKETS).split(COMMA)))
-        logging.info(f'Received client public key: {client_public_key}')
+        print(f'Received client public key: {client_public_key}')
         return client_public_key
 
     def communicate(self, client_name):
@@ -44,6 +41,9 @@ class Server:
                 message = input('Enter a message: ')
                 if message.lower() == EXIT_MESSAGE:
                     break
+                elif not message or message == '':
+                    print('Message cannot be empty.')
+                    continue
 
                 encrypted_message = custom_rsa.encrypt(message, self.client_public_key)
                 self.client_socket.send(str(encrypted_message).encode())
