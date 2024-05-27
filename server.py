@@ -64,5 +64,5 @@ class Server:
 
 
 if __name__ == '__main__':
-    server = Server(SERVER_HOST, SERVER_PORT, LIMIT_LISTEN)
+    server = Server(CLIENT_HOST, SERVER_PORT, LIMIT_LISTEN)
     server.start()
