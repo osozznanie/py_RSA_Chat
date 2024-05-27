@@ -35,7 +35,6 @@ class Client:
             while True:
                 encrypted_message = self.client_socket.recv(ENCRYPTED_MESSAGE_SIZE).decode()
                 encrypted_message = list(map(int, encrypted_message.strip(SQUARE_BRACKETS).split(COMMA)))
-                print(encrypted_message)
                 message = custom_rsa.decrypt(encrypted_message, self.private_key)
                 print(f'{server_name}: {message}')
 
