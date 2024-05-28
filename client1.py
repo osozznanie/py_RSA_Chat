@@ -1,5 +1,6 @@
 import socket
 import threading
+import sys
 
 import custom_rsa
 from constants import *
@@ -11,20 +12,28 @@ class Client:
         self.port = port
         self.public_key, self.private_key = custom_rsa.key_generation()
         self.server_socket = socket.socket()
+        self.connected = True
 
     def start(self):
-        self.server_socket.connect((self.host, self.port))
-        print(f'Connected to {self.host}:{self.port}')
+        try:
+            self.server_socket.connect((self.host, self.port))
+            print(f'Connected to {self.host}:{self.port}')
 
-        # Send own public key to the server
-        self.server_socket.send(str(self.public_key).encode())
+            # Send own public key to the server
+            self.server_socket.send(str(self.public_key).encode())
 
-        # Receive the other client's public key from the server
-        other_public_key = self.receive_public_key()
-        print(f'Received other client public key: {other_public_key}')
+            # Receive the other client's public key from the server
+            other_public_key = self.receive_public_key()
+            print(f'Received other client public key: {other_public_key}')
 
-        # Proceed with communication using the received public key
-        self.communicate(other_public_key)
+            # Proceed with communication using the received public key
+            self.communicate(other_public_key)
+        except ConnectionResetError:
+            print("Connection to the server was lost.")
+        finally:
+            self.server_socket.close()
+            self.connected = False
+            sys.exit(0)
 
     def receive_public_key(self):
         other_public_key = self.server_socket.recv(ENCRYPTED_MESSAGE_SIZE).decode()
@@ -43,8 +52,10 @@ class Client:
 
     def send_messages(self, other_public_key):
         try:
-            while True:
+            while self.connected:
                 message = input('Enter a message: ')
+                if not self.connected:
+                    break
                 if message.lower() == EXIT_MESSAGE:
                     break
                 elif not message:
@@ -58,14 +69,17 @@ class Client:
             print('Connection closed.')
         finally:
             self.server_socket.close()
+            self.connected = False
+            sys.exit(0)
 
     def receive_messages(self):
-        while True:
-            try:
+        try:
+            while self.connected:
                 encrypted_reply = self.server_socket.recv(ENCRYPTED_MESSAGE_SIZE).decode()
                 if not encrypted_reply:
-                    print('Empty reply received.')
-                    continue
+                    print('Server has closed the connection.')
+                    self.connected = False
+                    break
 
                 encrypted_reply = list(map(int, encrypted_reply.strip(SQUARE_BRACKETS).split(COMMA)))
                 reply = custom_rsa.decrypt(encrypted_reply, self.private_key)
@@ -78,9 +92,12 @@ class Client:
 
                 # Restore the cursor position and reprint the input prompt
                 print("\033[u\033[2KEnter a message: ", end='', flush=True)
-            except (KeyboardInterrupt, ConnectionResetError):
-                print('Connection closed.')
-                break
+        except (KeyboardInterrupt, ConnectionResetError):
+            print('Connection closed.')
+        finally:
+            self.server_socket.close()
+            self.connected = False
+            sys.exit(0)
 
 
 if __name__ == '__main__':
