@@ -71,14 +71,10 @@ class Server:
     def exchange_keys(self):
         client1_socket, client2_socket = self.client_sockets
 
-        # Receive public key from client 1
         client1_public_key = client1_socket.recv(ENCRYPTED_MESSAGE_SIZE).decode()
-        # Receive public key from client 2
         client2_public_key = client2_socket.recv(ENCRYPTED_MESSAGE_SIZE).decode()
 
-        # Send client 2's public key to client 1
         client1_socket.send(client2_public_key.encode())
-        # Send client 1's public key to client 2
         client2_socket.send(client1_public_key.encode())
 
         print('Public keys exchanged between clients.')
