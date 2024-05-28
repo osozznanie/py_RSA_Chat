@@ -19,14 +19,11 @@ class Client:
             self.server_socket.connect((self.host, self.port))
             print(f'Connected to {self.host}:{self.port}')
 
-            # Send own public key to the server
             self.server_socket.send(str(self.public_key).encode())
 
-            # Receive the other client's public key from the server
             other_public_key = self.receive_public_key()
             print(f'Received other client public key: {other_public_key}')
 
-            # Proceed with communication using the received public key
             self.communicate(other_public_key)
         except ConnectionResetError:
             print("Connection to the server was lost.")
@@ -64,7 +61,7 @@ class Client:
 
                 encrypted_message = custom_rsa.encrypt(message, other_public_key)
                 self.server_socket.send(str(encrypted_message).encode())
-                print("Message sent to the other client...")
+                print("===================== Message sent to the other client =====================")
         except (KeyboardInterrupt, ConnectionResetError):
             print('Connection closed.')
         finally:
@@ -83,14 +80,11 @@ class Client:
                 encrypted_reply = list(map(int, encrypted_reply.strip(SQUARE_BRACKETS).split(COMMA)))
                 reply = custom_rsa.decrypt(encrypted_reply, self.private_key)
 
-                # Save the current cursor position
-                print("\033[s", end='')
+                print("\033[2K", end='', flush=True)
+                print("\r", end='', flush=True)
 
-                # Move the cursor up one line, clear the line, and print the received message
-                print("Received: {}".format(reply))
-
-                # Restore the cursor position and reprint the input prompt
-                print("\033[u\033[2KEnter a message: ", end='', flush=True)
+                print(f"Received: {reply}")
+                print("Enter a message: ", end='', flush=True)
         except (KeyboardInterrupt, ConnectionResetError):
             print('Connection closed.')
         finally:
