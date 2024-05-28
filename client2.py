@@ -44,9 +44,7 @@ class Client:
     def send_messages(self, other_public_key):
         try:
             while True:
-                print('Enter a message: ', end='', flush=True)
-                message = input()
-                print("\033[1A\033[2K", end='', flush=True)
+                message = input('Enter a message: ')
                 if message.lower() == EXIT_MESSAGE:
                     break
                 elif not message:

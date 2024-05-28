@@ -44,9 +44,7 @@ class Client:
     def send_messages(self, other_public_key):
         try:
             while True:
-                print('Enter a message: ', end='', flush=True)
-                message = input()
-                print("\033[1A\033[2K", end='', flush=True)
+                message = input('Enter a message: ')
                 if message.lower() == EXIT_MESSAGE:
                     break
                 elif not message:
@@ -55,7 +53,7 @@ class Client:
 
                 encrypted_message = custom_rsa.encrypt(message, other_public_key)
                 self.server_socket.send(str(encrypted_message).encode())
-                print("\033[93m\033[1A\033[2KMessage sent to the other client...\033[0m")
+                print("Message sent to the other client...")
         except (KeyboardInterrupt, ConnectionResetError):
             print('Connection closed.')
         finally:
@@ -76,10 +74,10 @@ class Client:
                 print("\033[s", end='')
 
                 # Move the cursor up one line, clear the line, and print the received message
-                print("\033[1A\033[2K\033[94mReceived: {}\033[0m".format(reply))
+                print("Received: {}".format(reply))
 
                 # Restore the cursor position and reprint the input prompt
-                print("\033[uEnter a message: ", end='', flush=True)
+                print("\033[u\033[2KEnter a message: ", end='', flush=True)
             except (KeyboardInterrupt, ConnectionResetError):
                 print('Connection closed.')
                 break
