@@ -69,7 +69,6 @@ class Client:
 
                 encrypted_message = custom_rsa.encrypt(message, other_public_key)
                 self.server_socket.send(str(encrypted_message).encode())
-                print("===================== Message sent to the other client =====================")
         except (KeyboardInterrupt, ConnectionResetError):
             print('Connection closed.')
         finally:
@@ -90,7 +89,7 @@ class Client:
                 encrypted_reply = list(map(int, encrypted_reply.strip(SQUARE_BRACKETS).split(COMMA)))
                 reply = custom_rsa.decrypt(encrypted_reply, self.private_key)
 
-                print("\033[2K", end='', flush=True)
+                print("\033", end='', flush=True)
                 print("\r", end='', flush=True)
 
                 print(f"Received: {reply}")
