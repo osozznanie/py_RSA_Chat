@@ -89,8 +89,8 @@ class Client:
                 encrypted_reply = list(map(int, encrypted_reply.strip(SQUARE_BRACKETS).split(COMMA)))
                 reply = custom_rsa.decrypt(encrypted_reply, self.private_key)
 
-                print("\033", end='', flush=True)
-                print("\r", end='', flush=True)
+                # print(" ", end='', flush=True)
+                print("\r" + " " * 80 + "\r", end='', flush=True)
 
                 print(f"Received: {reply}")
                 print("Enter a message: ", end='', flush=True)
